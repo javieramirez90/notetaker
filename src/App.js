@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { API, graphqlOperation } from 'aws-amplify';
+import { API, Auth, graphqlOperation } from 'aws-amplify';
 import { withAuthenticator } from 'aws-amplify-react';
 import { createNote, deleteNote, updateNote } from './graphql/mutations'
 import { listNotes } from './graphql/queries';
@@ -65,8 +65,14 @@ class App extends Component {
   }
 
   componentDidMount(){
+    const owner = this.props.authData.username;
     this.getNotes();
-    this.createNoteListener = API.graphql(graphqlOperation(onCreateNote)).subscribe({
+     this.createNoteListener = API.graphql(
+       graphqlOperation(onCreateNote, 
+        {
+          owner
+        }
+    )).subscribe({
       next: noteData => {
         const newNote =  noteData.value.data.onCreateNote
         const prevNotes = this.state.notes.filter(note => note.id !== newNote.id)
@@ -74,7 +80,11 @@ class App extends Component {
         this.setState({notes: updatedNotes, note: ''})
       }
     })
-    this.deleteNoteListener =  API.graphql(graphqlOperation(onDeleteNote)).subscribe({
+    this.deleteNoteListener = API.graphql(graphqlOperation(onDeleteNote,
+      {
+        owner
+      }
+      )).subscribe({
       next: noteData => {
         const { notes } = this.state;
         const deletedNote = noteData.value.data.onDeleteNote
@@ -82,7 +92,11 @@ class App extends Component {
         this.setState({notes: updatedNotes})
       }
     })
-    this.updateNoteListener = API.graphql(graphqlOperation(onUpdateNote)).subscribe({
+    this.updateNoteListener = API.graphql(graphqlOperation(onUpdateNote, 
+      {
+        owner
+      }
+      )).subscribe({
       next: noteData => {
         const { notes } = this.state;
         const updatedNote = noteData.value.data.onUpdateNote
@@ -99,13 +113,16 @@ class App extends Component {
   }
 
   componentWillUnmount(){
-    this.createNoteListener().unsubscribe()
-    this.updateNoteListener().unsubscribe()
-    this.deleteNoteListener().unsubscribe()
+    this.createNoteListener.unsubscribe()
+    this.updateNoteListener.unsubscribe()
+    this.deleteNoteListener.unsubscribe()
   }
 
+  
   render() {
-
+    
+    
+    console.log(this.props)
     const { notes, note, id  }= this.state;
     return (
       <div className="flex flex-column items-center justify-center pa3 bg-washed-red">
